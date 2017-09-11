@@ -1,0 +1,73 @@
+---
+title: <center> "Practical Machine Learning Course Project" </center>
+author: <center> "Justin G." </center>
+date: "September 10, 2017"
+output: html_document
+---
+  
+## Executive Summary
+  
+So-called Human Activity Recognition is an emerging field of kinematics research. The "Weight Lifting Exercises dataset" collected by Ugulino *et al.* (2012) evaluated four healthy human subjects performing a variety of athletic activities over the course of eight hours.  These activities consisted of sitting-down, standing-up, standing, walking, and sitting.  The performance of each of these subjects was evaluated using one of five classes. Those falling into the "A" class performed the activities correctly, while those falling into the "B", "C", "D", and "E" datasets performed various mistakes during the course of performing the activities.  These classes are provided in the dataset's *classe* variable or dataset column. 
+
+The purpose of our exercise is to predict the value of *classe* using quantitative information recorded as part of the participants' performance of the activities.  We use machine learning approaches to predict the value of the *classe* variable on both a training and testing component of this dataset.
+
+More information about the research from which this dataset emerged can be viewed on the page accessible at [http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har](http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har), page last accessed 2017-09-10.
+
+``` {r load_libraries, message=F, warning=F, echo=TRUE, cache=TRUE}
+library(knitr); library(rmarkdown); library(parallel); library(doParallel); library(caret); library(ggplot2);
+training<-read.csv("C:\\Users\\gold9629\\Downloads\\pml-training.csv", header=T)
+testing<-read.csv("C:\\Users\\gold9629\\Downloads\\pml-testing.csv", header=T)
+```
+
+## Approach
+```{r perform_cross_validation, echo=TRUE, cache=TRUE, message=F, warning=F}
+
+# Order training data by date/time (since time-series values)
+training2 <- training[order(training$raw_timestamp_part_1, decreasing=TRUE),]
+
+# Set up parallel processing, which includes cross-validation (k-folds)
+cluster<-makeCluster(detectCores()-1)
+registerDoParallel(cluster)
+fitControl<-trainControl(method="cv", number=10, allowParallel=TRUE)
+
+# Set up randomForest model
+set.seed(20892)
+fit<-train(classe~roll_belt + pitch_belt + yaw_belt + total_accel_belt + roll_forearm + total_accel_forearm +
+             pitch_forearm + yaw_forearm + roll_dumbbell + pitch_dumbbell + yaw_dumbbell + total_accel_dumbbell +
+             roll_arm + pitch_arm + yaw_arm + total_accel_arm, data=training2, trControl = fitControl)
+
+fit
+
+#Close parallel processing (don't perform unless holding up processing)
+# stopCluster(cluster)
+# registerDoSEQ()
+
+# Predict on testing set
+print("the predictions on the testing set are as follows:")
+set.seed(20892)
+predict(fit, testing) 
+```
+Random Forests (rfs) was selected as the training method given their history of providing accurate results in kaggle competitions and elsewhere.  Parallel processing was employed in order to save time; they allow for rfs to be trained in a manner of a couple minutes in-lieu of much longer.  The parameters for parallel processing were obtained from the course mentor's writeup at: [https://github.com/lgreski/datasciencectacontent/blob/master/markdown/pml-randomForestPerformance.md](https://github.com/lgreski/datasciencectacontent/blob/master/markdown/pml-randomForestPerformance.md).   
+K-fold Cross validation was performed using 10 folds.  This approach is superior to that of subsetting the training data set to create a validation one as a validation set, in order to contain a complete inventory of the five *$classe* values while maintaining a continuous time-series, would've necessitated a very large size.  This large size would still greatly exceed the small (n=20) size of the testing set, thereby greatly complicating and causing a tremendous amount of overfitting on the training data set.  Perhaps a much larger testing set would've allowed for different validation approaches.
+
+The predictors were chosen by solely utilizing the variables that did not have directional components in their names (i.e., no "x", "y", and "z").  We decided to start with a small number of predictors in order to start simple and try to achieve the highest accuracy using the least amount of predictors possible.  However, our very high accuracy numbers achieved after cross-validation led us directly to performing *classe* values for the test set.
+                                                                                                                                           
+```{r show_prediction_values, cache=TRUE, echo=TRUE}
+par(mfrow=c(2,1))
+qplot(training2$classe) + ggtitle("Original distribution of *classe* variable in training data")
+qplot(predict(fit, testing), data=testing) + ggtitle("distribution of *classe* variable in predicted test data")
+invisible(par(mfrow=c(1,1)))
+```
+Given the large number of predictors, creating a "class centers" plot as seen in the "random forests" lecture, would be difficult to analyze.  As such, our plots shown above demonstrate the distribution of each *classe* in both the training and testing datasets. 
+
+With the caveats listed in the previous paragraph in mind, two plots are presented:
+1. Distribution  of values of *classe* in the training set
+2. Predicted values of *classe* in the testing data
+
+Note that much fewer "C" and "D" classes are predicted for the testing set than in the training set, most likely due to the small (n=20) size of the testing set.
+                                                                                                                                       
+## Conclusion and Discussion
+We attempted to fit a predictive model of performance class (*classe* variable) of exercise users using a parallelized version of the random forests algorithm.  A parallelized version was used because it greatly saved time vis-a-vis running a standard random forests algorithm using *solely* the *caret* package. After ordering the training data according to timestamp (earliest observation to latest) and then performing cross-validation on 10 k-folds.  Our prediction accuracy on the cross-validated training set was 0.9919987, and that for the testing set, evaluated using the course quiz, was 100%.
+                                         
+## BIBLIOGRAPHY
+Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: *Lecture Notes in Computer Science*, pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: [10.1007/978-3-642-34459-6_6](http://dx.doi.org/10.1007/978-3-642-34459-6_6). 
