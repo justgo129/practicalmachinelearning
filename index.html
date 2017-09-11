@@ -198,6 +198,7 @@ qplot(training2$classe) + ggtitle(&quot;Original distribution of *classe* variab
 <div id="conclusion-and-discussion" class="section level2">
 <h2>Conclusion and Discussion</h2>
 <p>We attempted to fit a predictive model of performance class (<em>classe</em> variable) of exercise users using a parallelized version of the random forests algorithm. A parallelized version was used because it greatly saved time vis-a-vis running a standard random forests algorithm using <em>solely</em> the <em>caret</em> package. After ordering the training data according to timestamp (earliest observation to latest) and then performing cross-validation on 10 k-folds. Our prediction accuracy on the cross-validated training set was 0.9919987, and that for the testing set, evaluated using the course quiz, was 100%.</p>
+<p>The higher accuracy score on the test set (100%) than that on the training set (99%), while small, is still interesting. One would’ve expected the out of sample error (here, testing data) to be less than the in-sample. Perhaps this was a function of the very small size and lack of variability within the <em>classe</em> portion of the testing data, compared to that in the much larger (n=19000+) training data.</p>
 </div>
 <div id="bibliography" class="section level2">
 <h2>BIBLIOGRAPHY</h2>
